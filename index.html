@@ -3,532 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório de Performance - Grupo Itambé</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Biblioteca para exportação Excel -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Hub de Performance - Grupo Itambé</title>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            scroll-behavior: smooth;
-        }
-        /* Gradients */
-        .brand-gradient-rb {
-            background: linear-gradient(135deg, #004a2f 0%, #00843d 100%);
-        }
-        .brand-gradient-itambe {
-            background: linear-gradient(135deg, #00331f 0%, #006633 100%);
-        }
-        .brand-gradient-concrebras {
-            background: linear-gradient(135deg, #064e3b 0%, #059669 100%);
-        }
-        
-        /* Borders */
-        .accent-border-rb { border-left: 4px solid #39B54A; }
-        .accent-border-itambe { border-left: 4px solid #00843d; }
-        .accent-border-concrebras { border-left: 4px solid #10b981; }
-        
-        .card-hover:hover {
-            transform: translateY(-2px);
-            transition: all 0.2s ease-in-out;
-        }
-        .hidden-view { display: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { height: 100%; width: 100%; overflow: hidden; background-color: #f5f5f5; font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; }
 
-        /* Estilo para o botão de download */
-        .btn-download {
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+        /* CABEÇALHO IDENTICO AO LOOKER */
+        .header-tif {
+            height: 70px; background-color: #004a20; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; z-index: 10000;
         }
-        .btn-download:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: scale(1.02);
+        .brand-section { display: flex; align-items: center; gap: 15px; }
+        .brand-logo { color: white; font-weight: 800; font-style: italic; font-size: 20px; letter-spacing: -1px; }
+        .divider { width: 1px; height: 25px; background-color: rgba(255,255,255,0.5); }
+        .unit-display { color: #2ecc71; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+
+        .nav-units { display: flex; gap: 10px; }
+        .btn-unit {
+            padding: 10px 18px; background-color: #003316; color: #ffffff; border: 1px solid #2ecc71; border-radius: 4px;
+            cursor: pointer; font-size: 11px; font-weight: bold; text-transform: uppercase; transition: 0.2s;
         }
+        .btn-unit.active-unit { background-color: #6fb06e; color: #111; border: 2px solid #ffffff; }
+
+        /* ÁREA DO DASHBOARD */
+        .main-container { flex-grow: 1; display: flex; position: relative; }
+        .dash-area { flex-grow: 1; position: relative; overflow: hidden; }
+        iframe {
+            position: absolute; top: -65px; /* Esconde topo original */
+            left: -2px; width: calc(100% + 4px); height: calc(100% + 120px); border: none; transition: opacity 0.3s;
+        }
+
+        /* MENU LATERAL DINÂMICO (NO LOCAL DO X) */
+        .platform-menu {
+            position: fixed; right: 60px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 9999;
+        }
+        .menu-group { display: none; flex-direction: column; gap: 8px; }
+        .menu-group.active-group { display: flex; }
+
+        .btn-plat {
+            width: 140px; padding: 12px; background: white; border: 1px solid #dadce0; border-radius: 6px;
+            cursor: pointer; font-size: 10px; font-weight: 600; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .btn-plat.active-plat { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
+
+        .mouse-blocker { position: absolute; bottom: 0; left: 0; width: 100%; height: 55px; z-index: 100; background: transparent; }
     </style>
 </head>
-<body class="pb-12">
+<body>
 
-    <!-- Header de Navegação -->
-    <header class="bg-[#004a2f] text-white sticky top-0 z-50 shadow-md">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center space-x-4">
-                <div class="font-bold text-xl tracking-tighter italic text-white">GRUPO ITAMBÉ.</div>
-                <div class="h-6 w-px bg-white/30"></div>
-                <div id="unit-label" class="text-sm font-semibold uppercase tracking-widest text-white/80">Rio Bonito</div>
-            </div>
-            
-            <nav class="flex space-x-1 bg-black/20 p-1 rounded-lg overflow-x-auto max-w-full">
-                <button onclick="switchView('rb')" id="btn-rb" class="whitespace-nowrap px-4 py-2 rounded-md text-[10px] md:text-xs font-bold transition-all bg-white/20 text-white">RIO BONITO</button>
-                <button onclick="switchView('itambe')" id="btn-itambe" class="whitespace-nowrap px-4 py-2 rounded-md text-[10px] md:text-xs font-bold transition-all hover:bg-white/10 opacity-60 text-white">CIMENTO ITAMBÉ</button>
-                <button onclick="switchView('concrebras')" id="btn-concrebras" class="whitespace-nowrap px-4 py-2 rounded-md text-[10px] md:text-xs font-bold transition-all hover:bg-white/10 opacity-60 text-white">CONCREBRAS</button>
-            </nav>
+    <header class="header-tif">
+        <div class="brand-section">
+            <div class="brand-logo">GRUPO ITAMBÉ</div>
+            <div class="divider"></div>
+            <div id="current-unit-label" class="unit-display">RIO BONITO</div>
         </div>
+        <nav class="nav-units">
+            <button class="btn-unit active-unit" onclick="switchFullContext('RIO BONITO', 'rio', 'https://lookerstudio.google.com/embed/reporting/e7231430-c472-4701-914a-96644445fe42/page/TmTqF', this)">Rio Bonito</button>
+            <button class="btn-unit" onclick="switchFullContext('CIMENTO ITAMBÉ', 'itambe', 'LINK_META_ITAMBE', this)">Cimento Itambé</button>
+            <button class="btn-unit" onclick="switchFullContext('CONCREBRAS', 'concrebras', 'LINK_META_CONCREBRAS', this)">Concrebras</button>
+            <button class="btn-unit" onclick="switchFullContext('ENERGÉTICA', 'energetica', 'LINK_META_ENERGETICA', this)">Energética</button>
+        </nav>
     </header>
 
-    <!-- VISÃO RIO BONITO -->
-    <div id="view-rb">
-        <section class="brand-gradient-rb text-white py-12 px-6">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                <div>
-                    <h1 class="text-4xl font-bold mb-2 uppercase text-white">Performance: Rio Bonito</h1>
-                    <p class="text-white/80 max-w-2xl font-medium uppercase text-xs tracking-wider">Dados consolidados referentes ao ano de 2025</p>
-                </div>
-                <button onclick="exportToExcel('rb')" class="btn-download bg-white/10 border border-white/30 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Exportar Excel
-                </button>
-            </div>
-        </section>
+    <div class="main-container">
+        <div class="dash-area">
+            <div class="mouse-blocker"></div>
+            <iframe id="main-iframe" src="https://lookerstudio.google.com/embed/reporting/e7231430-c472-4701-914a-96644445fe42/page/TmTqF"></iframe>
+        </div>
 
-        <main class="max-w-7xl mx-auto mt-[-40px] px-6 space-y-12">
-            <!-- KPI Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#39B54A]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Acessos no Site</p>
-                    <h3 class="text-3xl font-bold text-gray-800">9.969</h3>
-                    <p class="text-xs text-green-600 mt-2 font-bold uppercase underline">GA4 Overview</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#39B54A]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Usuários Ativos</p>
-                    <h3 class="text-3xl font-bold text-gray-800">8.343</h3>
-                    <p class="text-xs text-blue-600 mt-2 font-bold uppercase underline">Base Engajada</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#39B54A]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Novos Usuários</p>
-                    <h3 class="text-3xl font-bold text-gray-800">7.802</h3>
-                    <p class="text-xs text-gray-500 mt-2 italic font-bold uppercase underline">93% de aquisição</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#39B54A]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Taxa de Engajamento</p>
-                    <h3 class="text-3xl font-bold text-gray-800">40,07%</h3>
-                    <div class="w-full bg-gray-200 h-1.5 mt-4 rounded-full">
-                        <div class="bg-[#39B54A] h-1.5 rounded-full" style="width: 40%"></div>
-                    </div>
-                </div>
+        <div class="platform-menu">
+            <div id="menu-rio" class="menu-group active-group">
+                <button class="btn-plat active-plat" onclick="changeIframe('https://lookerstudio.google.com/embed/reporting/e7231430-c472-4701-914a-96644445fe42/page/TmTqF', this)">Meta Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GOOGLE_RIO', this)">Google Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_LINKEDIN_RIO', this)">LinkedIn</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_SEARCH_RIO', this)">Search</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GA4_RIO', this)">GA4</button>
             </div>
 
-            <!-- SEO Rio Bonito -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-                    <div class="bg-gray-50 border-b p-4"><h2 class="font-bold text-gray-700 uppercase text-xs">Páginas de Destaque (SEO)</h2></div>
-                    <div class="p-6 overflow-x-auto">
-                        <table class="w-full text-left" id="table-seo-rb">
-                            <thead>
-                                <tr class="text-gray-400 text-[10px] uppercase border-b">
-                                    <th class="pb-3">URL</th>
-                                    <th class="pb-3 text-right">Cliques</th>
-                                    <th class="pb-3 text-right">CTR</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-xs">
-                                <tr class="border-b last:border-0"><td class="py-4 font-bold text-gray-700 italic">riobonitosustentavel.com.br/</td><td class="py-4 text-right font-bold">599</td><td class="py-4 text-right text-[#39B54A] font-black italic">10,96%</td></tr>
-                                <tr class="border-b last:border-0"><td class="py-4 font-bold text-gray-700 italic">servicos-coprocessamento/</td><td class="py-4 text-right font-bold">158</td><td class="py-4 text-right text-gray-400">4,41%</td></tr>
-                                <tr class="border-b last:border-0"><td class="py-4 font-bold text-gray-700 italic">entre-em-contato/</td><td class="py-4 text-right font-bold">126</td><td class="py-4 text-right text-gray-400">3,03%</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="bg-[#004a2f] text-white rounded-xl shadow-sm p-6 flex flex-col justify-between">
-                    <div>
-                        <h2 class="text-[10px] uppercase tracking-[0.2em] text-white/50 mb-6 font-bold text-white">Google Search Console</h2>
-                        <div class="space-y-6">
-                            <div><p class="text-white/60 text-[10px] font-bold uppercase mb-1 text-white">Cliques Totais</p><p class="text-3xl font-bold tracking-tighter text-white">961</p></div>
-                            <div><p class="text-white/60 text-[10px] font-bold uppercase mb-1 text-white">Posição Média</p><p class="text-3xl font-bold tracking-tighter text-white">12,69</p></div>
-                            <div><p class="text-white/60 text-[10px] font-bold uppercase mb-1 text-white">Impressões</p><p class="text-3xl font-bold tracking-tighter text-white">13.838</p></div>
-                        </div>
-                    </div>
-                </div>
+            <div id="menu-itambe" class="menu-group">
+                <button class="btn-plat active-plat" onclick="changeIframe('LINK_META_ITAMBE', this)">Meta Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GOOGLE_ITAMBE', this)">Google Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_LINKEDIN_ITAMBE', this)">LinkedIn</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_SEARCH_ITAMBE', this)">Search</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GA4_ITAMBE', this)">GA4</button>
             </div>
 
-            <!-- Ads Rio Bonito -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white rounded-xl shadow-sm p-6 accent-border-rb">
-                    <div class="flex items-center space-x-2 mb-4">
-                        <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                        <span class="font-bold text-gray-700 uppercase text-xs tracking-widest">Meta Ads</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 metrics-group">
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Investimento</p><p class="text-lg font-bold">R$ 12.979,34</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Cliques</p><p class="text-lg font-bold">45.986</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">CPC Médio</p><p class="text-lg font-bold text-[#39B54A]">R$ 0,39</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Alcance</p><p class="text-lg font-bold">3.1M</p></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 accent-border-rb">
-                    <div class="flex items-center space-x-2 mb-4">
-                        <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.908 3.152-1.928 4.172-1.212 1.212-3.112 2.544-6.84 2.544-5.96 0-10.6-4.84-10.6-10.8s4.64-10.8 10.6-10.8c3.212 0 5.512 1.272 7.24 2.924l2.308-2.308c-1.964-1.872-4.52-3.316-9.548-3.316-8.584 0-15.712 6.968-15.712 15.548s7.128 15.548 15.712 15.548c4.628 0 8.112-1.528 10.872-4.4 2.856-2.856 3.756-6.852 3.756-10.188 0-.96-.084-1.864-.24-2.72h-14.4z"/></svg>
-                        <span class="font-bold text-gray-700 uppercase text-xs tracking-widest">Google Ads</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 metrics-group">
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Investimento</p><p class="text-lg font-bold">R$ 4.052,62</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Cliques</p><p class="text-lg font-bold">17.632</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">CPC Médio</p><p class="text-lg font-bold text-[#39B54A]">R$ 0,23</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Impressões</p><p class="text-lg font-bold">515K</p></div>
-                    </div>
-                </div>
+            <div id="menu-concrebras" class="menu-group">
+                <button class="btn-plat active-plat" onclick="changeIframe('LINK_META_CONCRE', this)">Meta Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GOOGLE_CONCRE', this)">Google Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_LINKEDIN_CONCRE', this)">LinkedIn</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_SEARCH_CONCRE', this)">Search</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GA4_CONCRE', this)">GA4</button>
             </div>
 
-            <!-- Insights Rio Bonito -->
-            <div class="bg-white rounded-xl shadow-sm p-8 border-l-8 border-[#39B54A]">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 uppercase tracking-tight">Insights Estratégicos: Rio Bonito</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm text-gray-600 leading-relaxed">
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#39B54A] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">1</span>
-                        <p><strong class="text-gray-800">Mix de Investimento:</strong> O Meta Ads é o motor de visibilidade (3x mais verba), gerando mais de 7M de impressões totais para reforço de marca.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#39B54A] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">2</span>
-                        <p><strong class="text-gray-800">Eficiência de Conversão:</strong> O Google Ads oferece o CPC mais baixo (R$ 0,23), sendo o canal mais rentável para gerar tráfego direto.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#39B54A] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">3</span>
-                        <p><strong class="text-gray-800">Autoridade B2B:</strong> O LinkedIn apresenta crescimento sólido (424 novos seguidores), consolidando a Rio Bonito como referência corporativa.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#39B54A] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">4</span>
-                        <p><strong class="text-gray-800">Interesse em Serviços:</strong> A página de Coprocessamento é o principal destino orgânico após a home, indicando alta demanda técnica.</p>
-                    </div>
-                </div>
+            <div id="menu-energetica" class="menu-group">
+                <button class="btn-plat active-plat" onclick="changeIframe('LINK_META_ENER', this)">Meta Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GOOGLE_ENER', this)">Google Ads</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_LINKEDIN_ENER', this)">LinkedIn</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_SEARCH_ENER', this)">Search</button>
+                <button class="btn-plat" onclick="changeIframe('LINK_GA4_ENER', this)">GA4</button>
             </div>
-        </main>
+        </div>
     </div>
-
-    <!-- VISÃO CIMENTO ITAMBÉ -->
-    <div id="view-itambe" class="hidden-view">
-        <section class="brand-gradient-itambe text-white py-12 px-6">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                <div>
-                    <h1 class="text-4xl font-bold mb-2 uppercase text-white">Performance: Cimento Itambé</h1>
-                    <p class="text-white/80 max-w-2xl font-medium uppercase text-xs tracking-wider">Dados consolidados referentes ao ano de 2025</p>
-                </div>
-                <button onclick="exportToExcel('itambe')" class="btn-download bg-white/10 border border-white/30 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Exportar Excel
-                </button>
-            </div>
-        </section>
-
-        <main class="max-w-7xl mx-auto mt-[-40px] px-6 space-y-12">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#00843d]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Acessos no Site</p>
-                    <h3 class="text-3xl font-bold text-gray-800">406.678</h3>
-                    <p class="text-xs text-red-500 mt-2 font-bold uppercase underline">▼ -24,61%</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#00843d]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Usuários Ativos</p>
-                    <h3 class="text-3xl font-bold text-gray-800">317.126</h3>
-                    <p class="text-xs text-red-500 mt-2 font-bold uppercase underline">▼ -26,18%</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#00843d]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Novos Usuários</p>
-                    <h3 class="text-3xl font-bold text-gray-800">310.524</h3>
-                    <p class="text-xs text-red-500 mt-2 font-bold uppercase underline">▼ -27,04%</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#00843d]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Taxa de Engajamento</p>
-                    <h3 class="text-3xl font-bold text-gray-800">88,57%</h3>
-                    <p class="text-xs text-green-600 mt-2 font-bold uppercase underline">▲ +14,39%</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-                    <div class="bg-gray-50 border-b p-4"><h2 class="font-bold text-gray-700 uppercase text-xs">Páginas de Destaque (SEO)</h2></div>
-                    <div class="p-6 overflow-x-auto">
-                        <table class="w-full text-left" id="table-seo-itambe">
-                            <thead>
-                                <tr class="text-gray-400 text-[10px] uppercase border-b">
-                                    <th class="pb-3">URL</th>
-                                    <th class="pb-3 text-right">Cliques</th>
-                                    <th class="pb-3 text-right">CTR</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-xs">
-                                <tr class="border-b last:border-0"><td class="py-4 font-bold text-gray-700 italic">cimentoitambe.com.br/</td><td class="py-4 text-right font-bold">7.370</td><td class="py-4 text-right text-gray-400 font-bold">3,78%</td></tr>
-                                <tr class="border-b last:border-0"><td class="py-4 font-bold text-gray-700 italic">conheca-a-itambe/trabalhe-conosco</td><td class="py-4 text-right font-bold">7.118</td><td class="py-4 text-right text-green-600 font-bold italic">6,12%</td></tr>
-                                <tr class="border-b last:border-0"><td class="py-4 font-bold text-gray-700 italic">manta-de-concreto-utilidades/</td><td class="py-4 text-right font-bold">6.205</td><td class="py-4 text-right text-gray-400 font-bold">5,51%</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="bg-[#00331f] text-white rounded-xl shadow-sm p-6 flex flex-col justify-between">
-                    <div>
-                        <h2 class="text-[10px] uppercase tracking-[0.2em] text-white/50 mb-6 font-bold text-white">Google Search Console</h2>
-                        <div class="space-y-6">
-                            <div><p class="text-white/40 text-[10px] font-bold uppercase mb-1 text-white">Cliques Totais</p><p class="text-3xl font-bold tracking-tighter text-white">153.908</p><p class="text-[10px] text-green-400 font-bold uppercase text-white">▲ +198,5%</p></div>
-                            <div><p class="text-white/40 text-[10px] font-bold uppercase mb-1 text-white">Impressões</p><p class="text-3xl font-bold tracking-tighter text-white">15.195.010</p></div>
-                            <div><p class="text-white/40 text-[10px] font-bold uppercase mb-1 text-white">Posição Média</p><p class="text-3xl font-bold tracking-tighter text-green-400">9,28</p></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white rounded-xl shadow-sm p-6 accent-border-itambe">
-                    <div class="flex items-center space-x-2 mb-4">
-                        <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                        <span class="font-bold text-gray-700 uppercase text-xs tracking-widest">Meta Ads</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 metrics-group">
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Investimento</p><p class="text-lg font-bold">R$ 38.088,89</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Cliques</p><p class="text-lg font-bold">122.919</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">CPC Médio</p><p class="text-lg font-bold text-blue-600 font-bold uppercase">R$ 0,38</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Alcance Total</p><p class="text-lg font-bold">3.6M</p></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 accent-border-itambe">
-                    <div class="flex items-center space-x-2 mb-4">
-                        <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.908 3.152-1.928 4.172-1.212 1.212-3.112 2.544-6.84 2.544-5.96 0-10.6-4.84-10.6-10.8s4.64-10.8 10.6-10.8c3.212 0 5.512 1.272 7.24 2.924l2.308-2.308c-1.964-1.872-4.52-3.316-9.548-3.316-8.584 0-15.712 6.968-15.712 15.548s7.128 15.548 15.712 15.548c4.628 0 8.112-1.528 10.872-4.4 2.856-2.856 3.756-6.852 3.756-10.188 0-.96-.084-1.864-.24-2.72h-14.4z"/></svg>
-                        <span class="font-bold text-gray-700 uppercase text-xs tracking-widest">Google Ads</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 metrics-group">
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Investimento</p><p class="text-lg font-bold">R$ 42.680,80</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Cliques</p><p class="text-lg font-bold">49.645</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">CPC Médio</p><p class="text-lg font-bold text-red-600 font-bold uppercase">R$ 0,86</p></div>
-                        <div><p class="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Impressões</p><p class="text-lg font-bold">4.2M</p></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Insights Itambé -->
-            <div class="bg-white rounded-xl shadow-sm p-8 border-l-8 border-[#00843d]">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 uppercase tracking-tight">Insights Estratégicos: Cimento Itambé</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm text-gray-600 leading-relaxed">
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#00843d] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">1</span>
-                        <p><strong class="text-gray-800">Engajamento de Elite:</strong> Apesar da queda no volume de sessões, a taxa de engajamento de 88,5% indica um público extremamente qualificado e interessado.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#00843d] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">2</span>
-                        <p><strong class="text-gray-800">Poder Orgânico:</strong> O GSC revela um salto massivo de +198% em cliques, com 15 milhões de impressões, mostrando domínio absoluto em termos de construção.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#00843d] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">3</span>
-                        <p><strong class="text-gray-800">Marca Empregadora:</strong> A página "Trabalhe Conosco" é a segunda mais acessada, destacando a força institucional e atratividade da marca no mercado.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#00843d] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">4</span>
-                        <p><strong class="text-gray-800">Social Corporativo:</strong> Crescimento de seguidores no LinkedIn (+3.7k) supera metas orgânicas e reforça o posicionamento B2B do grupo.</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- VISÃO CONCREBRAS -->
-    <div id="view-concrebras" class="hidden-view">
-        <section class="brand-gradient-concrebras text-white py-12 px-6">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                <div>
-                    <h1 class="text-4xl font-bold mb-2 uppercase text-white">Performance: Concrebras</h1>
-                    <p class="text-white/80 max-w-2xl font-medium uppercase text-xs tracking-wider">Líder em concreto usinado e soluções para construção civil. Dados de 2025.</p>
-                </div>
-                <button onclick="exportToExcel('concrebras')" class="btn-download bg-white/10 border border-white/30 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Exportar Excel
-                </button>
-            </div>
-        </section>
-
-        <main class="max-w-7xl mx-auto mt-[-40px] px-6 space-y-12">
-            <!-- KPI Cards Concrebras -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#10b981]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Acessos no Site</p>
-                    <h3 class="text-3xl font-bold text-gray-800">4.619</h3>
-                    <p class="text-xs text-green-600 mt-2 font-bold uppercase underline">GA4 Overview</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#10b981]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Usuários Ativos</p>
-                    <h3 class="text-3xl font-bold text-gray-800">3.256</h3>
-                    <p class="text-xs text-green-600 mt-2 font-bold uppercase underline">Base Engajada</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#10b981]">
-                    <p class="text-gray-500 text-sm font-medium uppercase">Novos Usuários</p>
-                    <h3 class="text-3xl font-bold text-gray-800">3.117</h3>
-                    <p class="text-xs text-gray-500 mt-2 italic font-bold uppercase underline">95% de aquisição</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-md card-hover border-t-4 border-[#10b981]">
-                    <p class="text-gray-500 text-sm font-medium uppercase text-xs">Taxa de Engajamento</p>
-                    <h3 class="text-3xl font-bold text-gray-800">36,87%</h3>
-                    <div class="w-full bg-gray-200 h-1.5 mt-4 rounded-full">
-                        <div class="bg-[#10b981] h-1.5 rounded-full" style="width: 36.87%"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SEO Concrebras -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 bg-[#064e3b] text-white rounded-xl shadow-sm p-8 flex flex-col justify-center">
-                    <h2 class="text-xs uppercase tracking-widest text-white/50 mb-8 font-bold text-white">Google Search Console (Resumo)</h2>
-                    <div class="grid grid-cols-2 gap-8 metrics-group">
-                        <div><p class="text-white/40 text-[10px] font-bold uppercase mb-1 text-white">Cliques Totais</p><p class="text-4xl font-bold tracking-tighter text-white">678</p></div>
-                        <div><p class="text-white/40 text-[10px] font-bold uppercase mb-1 text-white">Impressões</p><p class="text-4xl font-bold tracking-tighter text-white">15.498</p></div>
-                        <div><p class="text-white/40 text-[10px] font-bold uppercase mb-1 text-white">CTR Médio</p><p class="text-4xl font-bold tracking-tighter text-green-300">4,37%</p></div>
-                        <div><p class="text-white/40 text-[10px] font-bold uppercase mb-1 text-white">Posição Média</p><p class="text-4xl font-bold tracking-tighter text-white">17,52</p></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center">
-                    <h2 class="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-6 font-bold">Google Ads (Média)</h2>
-                    <div class="space-y-6 metrics-group">
-                        <div class="flex justify-between items-end border-b pb-2"><p class="text-gray-400 text-[10px] font-bold uppercase">Custo Total</p><p class="text-xl font-bold">R$ 609,63</p></div>
-                        <div class="flex justify-between items-end border-b pb-2"><p class="text-gray-400 text-[10px] font-bold uppercase">CPC Médio</p><p class="text-xl font-bold text-green-600">R$ 0,15</p></div>
-                        <div class="flex justify-between items-end border-b pb-2"><p class="text-gray-400 text-[10px] font-bold uppercase">Cliques</p><p class="text-xl font-bold">4.167</p></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Redes Sociais Concrebras -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="bg-white rounded-xl shadow-sm p-6 accent-border-concrebras">
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-2">LinkedIn Concrebras</p>
-                    <p class="text-2xl font-bold">4.347</p>
-                    <p class="text-xs text-gray-500">Seguidores atuais</p>
-                    <div class="mt-4 pt-4 border-t flex justify-between">
-                        <div><p class="text-[9px] text-gray-400 uppercase font-bold">Alcance</p><p class="font-bold">4.9k</p></div>
-                        <div><p class="text-[9px] text-gray-400 uppercase font-bold">Cliques</p><p class="font-bold text-green-600">158</p></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 accent-border-concrebras">
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-2">Facebook Concrebras</p>
-                    <p class="text-2xl font-bold">3.785</p>
-                    <p class="text-xs text-gray-500">Seguidores atuais</p>
-                    <div class="mt-4 pt-4 border-t flex justify-between">
-                        <div><p class="text-[9px] text-gray-400 uppercase font-bold">Visualizações</p><p class="font-bold">16.5k</p></div>
-                        <div><p class="text-[9px] text-gray-400 uppercase font-bold">Engajamento</p><p class="font-bold text-green-600">513</p></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 accent-border-concrebras">
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-2">Instagram Business</p>
-                    <p class="text-2xl font-bold">2.288</p>
-                    <p class="text-xs text-gray-500">Seguidores atuais</p>
-                    <div class="mt-4 pt-4 border-t flex justify-between">
-                        <div><p class="text-[9px] text-gray-400 uppercase font-bold">Visitas Perfil</p><p class="font-bold">481</p></div>
-                        <div><p class="text-[9px] text-gray-400 uppercase font-bold">Alcance Único</p><p class="font-bold text-green-600">1.9k</p></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Insights Concrebras -->
-            <div class="bg-white rounded-xl shadow-sm p-8 border-l-8 border-[#10b981]">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 uppercase tracking-tight">Insights Estratégicos: Concrebras</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm text-gray-600 leading-relaxed">
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#10b981] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">1</span>
-                        <p><strong class="text-gray-800">Eficiência de Custo:</strong> O CPC do Google Ads (R$ 0,15) é o mais baixo de todo o grupo, indicando uma segmentação altamente otimizada ou termos de busca muito específicos.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#10b981] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">2</span>
-                        <p><strong class="text-gray-800">Foco Regional:</strong> O Instagram revela forte concentração de seguidores em Curitiba (205) e Joinville (160), validando a força da marca na região Sul.</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#10b981] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">3</span>
-                        <p><strong class="text-gray-800">Oportunidade de Engajamento:</strong> Com 16,5k visualizações no Facebook e apenas 513 engajamentos, há espaço para otimizar o conteúdo para interatividade (CTAs).</p>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <span class="bg-[#10b981] text-white rounded-full h-5 w-5 flex items-center justify-center shrink-0 font-bold text-[10px]">4</span>
-                        <p><strong class="text-gray-800">Estabilidade Orgânica:</strong> CTR de 4,37% no Search Console é saudável para o segmento, mantendo o tráfego constante de novos usuários (95% da base).</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <footer class="mt-12 text-center text-gray-400 text-[10px] uppercase font-bold tracking-widest pb-8 border-t pt-8 max-w-7xl mx-auto">
-        <p>&copy; 2025 Grupo Itambé | Relatório de Inteligência Digital Consolidado</p>
-    </footer>
 
     <script>
-        function switchView(view) {
-            const views = ['rb', 'itambe', 'concrebras'];
-            const labels = { 'rb': 'Rio Bonito', 'itambe': 'Cimento Itambé', 'concrebras': 'Concrebras' };
-            
-            views.forEach(v => {
-                const viewEl = document.getElementById(`view-${v}`);
-                const btnEl = document.getElementById(`btn-${v}`);
-                
-                if (v === view) {
-                    viewEl.classList.remove('hidden-view');
-                    btnEl.classList.add('bg-white/20');
-                    btnEl.classList.remove('opacity-60', 'hover:bg-white/10');
-                } else {
-                    viewEl.classList.add('hidden-view');
-                    btnEl.classList.remove('bg-white/20');
-                    btnEl.classList.add('opacity-60', 'hover:bg-white/10');
-                }
-            });
-            
-            document.getElementById('unit-label').innerText = labels[view];
-            window.scrollTo({top: 0, behavior: 'smooth'});
+        const iframe = document.getElementById('main-iframe');
+
+        function switchFullContext(unitName, menuKey, initialUrl, btn) {
+            document.getElementById('current-unit-label').innerText = unitName;
+            document.querySelectorAll('.btn-unit').forEach(b => b.classList.remove('active-unit'));
+            btn.classList.add('active-unit');
+
+            document.querySelectorAll('.menu-group').forEach(g => g.classList.remove('active-group'));
+            const activeGroup = document.getElementById('menu-' + menuKey);
+            activeGroup.classList.add('active-group');
+
+            // Reseta para o primeiro botão (Meta) da nova empresa
+            const firstPlatBtn = activeGroup.querySelector('.btn-plat');
+            changeIframe(initialUrl, firstPlatBtn);
         }
 
-        /**
-         * Correção do Erro: Escapando caracteres especiais em seletores CSS do Tailwind.
-         */
-        function exportToExcel(unit) {
-            const names = { 'rb': 'Rio Bonito', 'itambe': 'Cimento Itambe', 'concrebras': 'Concrebras' };
-            const container = document.getElementById(`view-${unit}`);
-            
-            // 1. Coleta de KPIs
-            const kpis = [["Métrica de Performance", "Valor"]];
-            container.querySelectorAll('.bg-white.p-6').forEach(card => {
-                const label = card.querySelector('p')?.innerText;
-                const value = card.querySelector('h3')?.innerText;
-                if(label && value) kpis.push([label, value]);
-            });
+        function changeIframe(url, btn) {
+            iframe.style.opacity = '0';
+            setTimeout(() => {
+                iframe.src = url;
+                iframe.style.opacity = '1';
+            }, 300);
 
-            // 2. Coleta de Canais (Ads)
-            const adsData = [["Canal/Origem", "Métrica", "Valor"]];
-            
-            // Usamos um seletor mais seguro que evita caracteres especiais do Tailwind que quebram o querySelector
-            const sections = container.querySelectorAll('.accent-border-' + unit + ', .border-gray-100, div[class*="bg-[#064e3b]"]');
-            
-            sections.forEach(section => {
-                const title = section.querySelector('span')?.innerText || section.querySelector('h2')?.innerText || "Ads/Resumo";
-                section.querySelectorAll('.metrics-group > div, div.flex.justify-between').forEach(stat => {
-                    const labelArr = stat.querySelectorAll('p');
-                    if(labelArr.length >= 2) {
-                        adsData.push([title, labelArr[0].innerText, labelArr[1].innerText]);
-                    }
-                });
-            });
-
-            // 3. Criar Workbook
-            const wb = XLSX.utils.book_new();
-            
-            // Aba 1: Resumo
-            const ws_resumo = XLSX.utils.aoa_to_sheet([
-                ["RELATÓRIO DE PERFORMANCE - " + names[unit].toUpperCase()],
-                ["Data do Relatório", "Ano 2025"],
-                ["Data de Exportação", new Date().toLocaleDateString()],
-                [],
-                ["INDICADORES PRINCIPAIS"],
-                ...kpis,
-                [],
-                ["DETALHAMENTO DE CANAIS E ADS"],
-                ...adsData
-            ]);
-            XLSX.utils.book_append_sheet(wb, ws_resumo, "Resumo Executivo");
-
-            // Aba 2: SEO (se houver tabela)
-            const seoTable = container.querySelector('table');
-            if(seoTable) {
-                const ws_seo = XLSX.utils.table_to_sheet(seoTable);
-                XLSX.utils.book_append_sheet(wb, ws_seo, "Performance SEO");
-            }
-
-            // 4. Salvar Arquivo
-            XLSX.writeFile(wb, `Performance_${names[unit]}_2025.xlsx`);
+            btn.parentElement.querySelectorAll('.btn-plat').forEach(b => b.classList.remove('active-plat'));
+            btn.classList.add('active-plat');
         }
     </script>
 </body>
